@@ -1,0 +1,157 @@
+﻿@model SelectionGame.Models.SelectGameDTO
+@Scripts.Render("~/bundles/jquery")
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Welcome to the Selection Game</h2>
+<div id="scoreboard">
+<span>Scoreboard</span></br><span id="score"> 500</span>
+</div>
+
+<div id="intructions">Here you have collections of buttons with different country names and province names. All you have to do is figure out which province belongs o which country
+    or vice- versa. If they are correct , the pair will turn green and fadeout and in case they are wrong, they will turn red . </br>
+    Enjoy :)
+</div>
+</br></br>
+<div id="gameArea"></div>
+
+@*<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>*@
+
+
+<script>
+    // Declare variables to hold game data
+    var listOfItems = [];
+    var originalData = [];
+
+    // Function to load the game data
+    function loadGame() {
+        $.ajax({
+            url: "/SelectGame/loadjson/",
+            type: 'get',
+            dataType: 'json',
+            success: function (response) {
+
+                // Extract the relevant items from the JSON data and populate the listOfItems array
+                $.each(response, function (key, value) {
+                    listOfItems.push(value.CountryName);
+                    listOfItems.push(value.ProvinceName);
+
+                    var data = {
+                        cName: value.CountryName,
+                        pName: value.ProvinceName
+                    };
+                    originalData.push(data);
+                });
+
+                var newRandomisedArray = ShuffleArray(listOfItems);
+
+                // Create buttons based on the items in the listOfItems array and append them to the gameArea div
+                for (var i = 0; i < newRandomisedArray.length; i++) {
+                    var item = newRandomisedArray[i];
+                    var buttonClass = "";
+                    if (originalData.find(function (data) { return data.cName === item; })) {
+                        buttonClass = "countryClass";
+                    } else if (originalData.find(function (data) { return data.pName === item; })) {
+                        buttonClass = "provinceClass";
+                    }
+
+                    $("#gameArea").append('<button class="custom-btn ' + buttonClass + '" value="' + item + '">' + item + '</button>');
+                }
+                
+            }
+
+        });
+    }
+
+    // Function to shuffle the list of items(country Name and Province Name)
+    function ShuffleArray(listOfItems) {
+        var currentIndex = listOfItems.length;
+        var temporaryValue;
+        var randomIndex;
+
+        // While there remain elements to shuffle...
+        while (0 !== currentIndex) {
+            // Pick a remaining element...
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex -= 1;
+
+            // Swap it with the current element.
+            temporaryValue = listOfItems[currentIndex];
+            listOfItems[currentIndex] = listOfItems[randomIndex];
+            listOfItems[randomIndex] = temporaryValue;
+        }
+        return listOfItems;
+    }
+
+    function getCorrespondingValue(clickedButton) {        
+        let realCorrespondingItem = "NA";
+
+        for (var i = 0; i < originalData.length; i++) {
+            if (clickedButton.hasClass('countryClass')) {
+                if (clickedButton.val() === originalData[i].cName) {
+                    realCorrespondingItem = originalData[i].pName;
+                }
+            }
+            else if (clickedButton.hasClass('provinceClass')) {
+                if (clickedButton.val() === originalData[i].pName) {
+                    realCorrespondingItem = originalData[i].cName;
+                }
+            }
+        }
+        return realCorrespondingItem;
+    }
+    //function that checks selected button is of counntry type or provincetype
+    function startGame() {
+        let isFirstButtonClicked = null;  
+        let button1 = null;
+        let correspodingValue1 = null;
+        let correspondingValue2 = null;
+        let button2 = null;
+        
+        // Adding a click event handler for elements with the class 'custom-btn'
+
+
+        $(document).on('click', '.custom-btn', function () {            
+            var clickedButton = $(this);
+
+            if (isFirstButtonClicked === null) {
+                isFirstButtonClicked = clickedButton;
+                console.log(" First button clicked ");
+                button1 = $(this);
+                correspodingValue1 = getCorrespondingValue(button1);
+                button1.css("background-color", "green");            
+            }
+            else {
+                console.log("Second button clicked");
+                button2 = $(this);
+                correspondingValue2 = getCorrespondingValue(button2);
+
+                //Implementing logic to match the countryName with province
+                if ((correspodingValue1 === button2.val()) || (correspondingValue2 === button1.val())) {
+                    console.log("They are the pair");
+                    button2.css("background-color", "green");
+                    button1.fadeOut(500);
+                    button2.fadeOut(500);
+                }
+                else {
+                    console.log("They are not the pair");
+                    button1.css("background-color", "red");
+                    button2.css("background-color", "red");
+                }
+
+                isFirstButtonClicked = null;
+            }
+
+        });
+
+    }
+    $(document).ready(function () {
+        // Calling the loadGame() function on document ready
+        loadGame();
+        console.log(originalData);   
+        startGame();
+
+    });
+</script>
